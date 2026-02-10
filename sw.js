@@ -1,4 +1,4 @@
-const CACHE_NAME = 'words-v4';
+const CACHE_NAME = 'words-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,8 @@ const ASSETS = [
   './icon-180.png',
   './icon-192.png',
   './icon-512.png',
-  './words.json'
+  './words.json',
+  './known-words.json'
 ];
 
 self.addEventListener('install', e => {
@@ -34,7 +35,7 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  if (e.request.url.includes('words.json')) {
+  if (e.request.url.includes('words.json') || e.request.url.includes('known-words.json')) {
     e.respondWith(
       fetch(e.request).then(resp => {
         const clone = resp.clone();

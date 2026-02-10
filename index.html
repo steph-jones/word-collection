@@ -1026,6 +1026,25 @@ async function syncFromMasterList() {
       renderWordList(document.getElementById('searchInput').value);
     }
   } catch {}
+
+  try {
+    const resp2 = await fetch('known-words.json?t=' + Date.now());
+    if (!resp2.ok) return;
+    const masterKnown = await resp2.json();
+    const existingKnown = new Set(knownWords.map(w => w.word.toLowerCase()));
+    let addedKnown = 0;
+    for (const entry of masterKnown) {
+      if (!existingKnown.has(entry.word.toLowerCase())) {
+        knownWords.push({ word: entry.word, definition: entry.definition, added: Date.now() });
+        existingKnown.add(entry.word.toLowerCase());
+        addedKnown++;
+      }
+    }
+    if (addedKnown > 0) {
+      saveKnownWords();
+      renderKnownList(document.getElementById('knownSearchInput').value);
+    }
+  } catch {}
 }
 
 // ===== INIT =====
