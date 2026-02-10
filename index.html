@@ -1006,10 +1006,33 @@ function esc(s) {
   return d.innerHTML;
 }
 
+// ===== SYNC FROM words.json =====
+async function syncFromMasterList() {
+  try {
+    const resp = await fetch('words.json?t=' + Date.now());
+    if (!resp.ok) return;
+    const masterWords = await resp.json();
+    const existing = new Set(words.map(w => w.word.toLowerCase()));
+    let added = 0;
+    for (const entry of masterWords) {
+      if (!existing.has(entry.word.toLowerCase())) {
+        words.push({ word: entry.word, definition: entry.definition, added: Date.now() });
+        existing.add(entry.word.toLowerCase());
+        added++;
+      }
+    }
+    if (added > 0) {
+      saveWords();
+      renderWordList(document.getElementById('searchInput').value);
+    }
+  } catch {}
+}
+
 // ===== INIT =====
 loadWords();
 loadKnownWords();
 renderWordList();
+syncFromMasterList();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});

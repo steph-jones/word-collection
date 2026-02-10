@@ -1,11 +1,12 @@
-const CACHE_NAME = 'words-v3';
+const CACHE_NAME = 'words-v4';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-180.png',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './words.json'
 ];
 
 self.addEventListener('install', e => {
@@ -27,9 +28,20 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
-  // For API calls (dictionary lookups), try network first, no cache fallback
+  // For API calls and words.json, try network first with cache fallback
   if (e.request.url.includes('dictionaryapi.dev')) {
     e.respondWith(fetch(e.request));
+    return;
+  }
+
+  if (e.request.url.includes('words.json')) {
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
     return;
   }
 
