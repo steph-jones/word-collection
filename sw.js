@@ -1,13 +1,11 @@
-const CACHE_NAME = 'words-v5';
+const CACHE_NAME = 'words-v6';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-180.png',
   './icon-192.png',
-  './icon-512.png',
-  './words.json',
-  './known-words.json'
+  './icon-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -29,20 +27,12 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
 
-  // For API calls and words.json, try network first with cache fallback
-  if (e.request.url.includes('dictionaryapi.dev')) {
+  // Let Firebase and dictionary API calls go straight to network
+  if (e.request.url.includes('firestore.googleapis.com') ||
+      e.request.url.includes('firebase') ||
+      e.request.url.includes('gstatic.com') ||
+      e.request.url.includes('dictionaryapi.dev')) {
     e.respondWith(fetch(e.request));
-    return;
-  }
-
-  if (e.request.url.includes('words.json') || e.request.url.includes('known-words.json')) {
-    e.respondWith(
-      fetch(e.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
-        return resp;
-      }).catch(() => caches.match(e.request))
-    );
     return;
   }
 

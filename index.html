@@ -10,6 +10,8 @@
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="manifest" href="manifest.json">
 <title>Word Collection</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -608,6 +610,18 @@ const INITIAL_WORDS = [
 ["Yestermorn","yesterday morning"]
 ];
 
+// ===== FIREBASE =====
+const firebaseConfig = {
+  apiKey: "AIzaSyCCXhBpriLHKJ9ujRO0Y1GpIW-HS25L3EI",
+  authDomain: "word-collection-2f0a7.firebaseapp.com",
+  projectId: "word-collection-2f0a7",
+  storageBucket: "word-collection-2f0a7.firebasestorage.app",
+  messagingSenderId: "917621522545",
+  appId: "1:917621522545:web:24341f1149b1d5266adbd0"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 // ===== APP STATE =====
 const STORAGE_KEY = 'wordCollection';
 const DAILY_KEY = 'dailyWords';
@@ -631,6 +645,13 @@ function loadWords() {
 
 function saveWords() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+  syncWordsToFirebase();
+}
+
+function syncWordsToFirebase() {
+  const batch = {};
+  words.forEach(w => { batch[w.word] = { definition: w.definition, added: w.added || Date.now() }; });
+  db.collection('lists').doc('words').set({ items: batch }).catch(() => {});
 }
 
 function getWordsSorted() {
@@ -644,6 +665,13 @@ function loadKnownWords() {
 
 function saveKnownWords() {
   localStorage.setItem(KNOWN_KEY, JSON.stringify(knownWords));
+  syncKnownToFirebase();
+}
+
+function syncKnownToFirebase() {
+  const batch = {};
+  knownWords.forEach(w => { batch[w.word] = { definition: w.definition, added: w.added || Date.now() }; });
+  db.collection('lists').doc('known').set({ items: batch }).catch(() => {});
 }
 
 function getKnownSorted() {
@@ -1006,52 +1034,60 @@ function esc(s) {
   return d.innerHTML;
 }
 
-// ===== SYNC FROM words.json =====
-async function syncFromMasterList() {
-  try {
-    const resp = await fetch('words.json?t=' + Date.now());
-    if (!resp.ok) return;
-    const masterWords = await resp.json();
-    const existing = new Set(words.map(w => w.word.toLowerCase()));
-    let added = 0;
-    for (const entry of masterWords) {
-      if (!existing.has(entry.word.toLowerCase())) {
-        words.push({ word: entry.word, definition: entry.definition, added: Date.now() });
-        existing.add(entry.word.toLowerCase());
-        added++;
-      }
+// ===== FIREBASE REAL-TIME SYNC =====
+function startFirebaseSync() {
+  // Listen for word collection changes
+  db.collection('lists').doc('words').onSnapshot(doc => {
+    if (!doc.exists) {
+      // First time: push local words to Firebase
+      syncWordsToFirebase();
+      return;
     }
-    if (added > 0) {
-      saveWords();
+    const items = doc.data().items || {};
+    const firebaseWords = Object.entries(items).map(([word, data]) => ({
+      word, definition: data.definition, added: data.added || Date.now()
+    }));
+    // Replace local with Firebase (Firebase is the source of truth)
+    const localSet = new Set(words.map(w => w.word.toLowerCase()));
+    const fbSet = new Set(firebaseWords.map(w => w.word.toLowerCase()));
+    const changed = words.length !== firebaseWords.length ||
+      firebaseWords.some(w => !localSet.has(w.word.toLowerCase())) ||
+      words.some(w => !fbSet.has(w.word.toLowerCase()));
+    if (changed) {
+      words = firebaseWords;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
       renderWordList(document.getElementById('searchInput').value);
     }
-  } catch {}
+  }, () => {});
 
-  try {
-    const resp2 = await fetch('known-words.json?t=' + Date.now());
-    if (!resp2.ok) return;
-    const masterKnown = await resp2.json();
-    const existingKnown = new Set(knownWords.map(w => w.word.toLowerCase()));
-    let addedKnown = 0;
-    for (const entry of masterKnown) {
-      if (!existingKnown.has(entry.word.toLowerCase())) {
-        knownWords.push({ word: entry.word, definition: entry.definition, added: Date.now() });
-        existingKnown.add(entry.word.toLowerCase());
-        addedKnown++;
-      }
+  // Listen for known words changes
+  db.collection('lists').doc('known').onSnapshot(doc => {
+    if (!doc.exists) {
+      syncKnownToFirebase();
+      return;
     }
-    if (addedKnown > 0) {
-      saveKnownWords();
+    const items = doc.data().items || {};
+    const firebaseKnown = Object.entries(items).map(([word, data]) => ({
+      word, definition: data.definition, added: data.added || Date.now()
+    }));
+    const localSet = new Set(knownWords.map(w => w.word.toLowerCase()));
+    const fbSet = new Set(firebaseKnown.map(w => w.word.toLowerCase()));
+    const changed = knownWords.length !== firebaseKnown.length ||
+      firebaseKnown.some(w => !localSet.has(w.word.toLowerCase())) ||
+      knownWords.some(w => !fbSet.has(w.word.toLowerCase()));
+    if (changed) {
+      knownWords = firebaseKnown;
+      localStorage.setItem(KNOWN_KEY, JSON.stringify(knownWords));
       renderKnownList(document.getElementById('knownSearchInput').value);
     }
-  } catch {}
+  }, () => {});
 }
 
 // ===== INIT =====
 loadWords();
 loadKnownWords();
 renderWordList();
-syncFromMasterList();
+startFirebaseSync();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
