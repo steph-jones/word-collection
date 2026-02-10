@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f5f0eb">
+<meta name="apple-mobile-web-app-title" content="Words">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<title>Word Collection</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #f5f0eb; --surface: #ffffff; --surface2: #ece5de;
+  --accent: #6b7fa3; --accent2: #576d8e; --text: #3b2f2f;
+  --text2: #7a6e6e; --border: #ddd4cb; --danger: #c0635e;
+  --pink: #d4a5a5; --tan: #c4a882;
+  --nav-h: 64px; --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; overflow: hidden; }
+body { display: flex; flex-direction: column; }
+
+/* Header */
+.header { padding: 16px 20px 12px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.header h1 { font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+.header .subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* Pages */
+.page { display: none; flex: 1; overflow: hidden; flex-direction: column; }
+.page.active { display: flex; }
+
+/* Search bar */
+.search-bar { padding: 12px 20px; flex-shrink: 0; }
+.search-bar input {
+  width: 100%; padding: 10px 16px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px; outline: none;
+}
+.search-bar input::placeholder { color: var(--text2); }
+.search-bar input:focus { border-color: var(--accent); }
+
+/* Word list */
+.word-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 20px 20px; }
+.letter-header { font-size: 13px; font-weight: 700; color: var(--accent); padding: 12px 0 6px; text-transform: uppercase; letter-spacing: 1px; position: sticky; top: 0; background: var(--bg); z-index: 1; }
+.word-card {
+  background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+  border: 1px solid var(--border); transition: border-color 0.2s;
+}
+.word-card:active { border-color: var(--accent); }
+.word-card .word-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+.word-card .word-def { font-size: 14px; color: var(--text2); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.word-count { font-size: 12px; color: var(--text2); padding: 4px 0 8px; text-align: center; }
+
+/* Daily page */
+.daily-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px; }
+.daily-section { margin-bottom: 24px; }
+.daily-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--accent); margin-bottom: 10px; }
+.daily-card {
+  background: var(--surface); border-radius: 16px; padding: 20px; border: 1px solid var(--border);
+}
+.daily-card .word-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+.daily-card .word-def { font-size: 15px; color: var(--text2); line-height: 1.55; }
+.daily-card .word-origin { font-size: 12px; color: var(--text2); margin-top: 8px; font-style: italic; opacity: 0.7; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border-radius: 10px;
+  border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+}
+.btn-accent { background: var(--accent); color: #fff; }
+.btn-accent:active { background: var(--accent2); transform: scale(0.97); }
+.btn-outline { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.btn-outline:active { background: var(--accent); color: #fff; }
+.btn-danger { background: transparent; color: var(--danger); border: 1.5px solid var(--danger); }
+.btn-danger:active { background: var(--danger); color: #fff; }
+.btn-row { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+.added-msg { color: var(--accent2); font-size: 14px; font-weight: 600; margin-top: 14px; }
+.refresh-hint { font-size: 12px; color: var(--text2); margin-top: 6px; }
+.loading { color: var(--text2); font-size: 14px; padding: 20px; text-align: center; }
+
+/* Add page */
+.add-content { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 20px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text2); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-group input, .form-group textarea {
+  width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); font-size: 15px; outline: none; font-family: inherit;
+}
+.form-group textarea { min-height: 120px; resize: vertical; line-height: 1.5; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--accent); }
+.form-hint { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.form-msg { margin-top: 12px; font-size: 14px; padding: 10px 14px; border-radius: 8px; }
+.form-msg.success { background: rgba(107,127,163,0.1); color: var(--accent2); }
+.form-msg.error { background: rgba(231,76,60,0.1); color: var(--danger); }
+
+/* Detail modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(59,47,47,0.4); z-index: 100;
+  align-items: flex-end; justify-content: center;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px calc(24px + var(--safe-bottom));
+  width: 100%; max-width: 500px; max-height: 85vh; overflow-y: auto;
+  animation: slideUp 0.25s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal .handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
+.modal .word-title { font-size: 24px; font-weight: 700; margin-bottom: 10px; }
+.modal .word-def { font-size: 16px; color: var(--text2); line-height: 1.6; }
+
+/* Nav */
+nav {
+  display: flex; background: var(--surface); border-top: 1px solid var(--border);
+  padding: 6px 0 calc(6px + var(--safe-bottom)); flex-shrink: 0;
+}
+nav button {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  background: none; border: none; color: var(--text2); font-size: 10px; font-weight: 600;
+  padding: 8px 0; cursor: pointer; transition: color 0.2s;
+}
+nav button.active { color: var(--accent); }
+nav button svg { width: 22px; height: 22px; }
+
+/* Alphabet sidebar */
+.alpha-sidebar {
+  position: fixed; right: 2px; top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; z-index: 10; padding: 4px 0;
+}
+.alpha-sidebar span {
+  font-size: 9px; font-weight: 700; color: var(--text2); padding: 1.5px 6px;
+  text-align: center; cursor: pointer;
+}
+.alpha-sidebar span:active { color: var(--accent); }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+.empty-state .big { font-size: 40px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Word Collection</h1>
+  <div class="subtitle" id="wordCountHeader"></div>
+</div>
+
+<!-- Browse Page -->
+<div class="page active" id="page-browse">
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search words..." autocomplete="off">
+  </div>
+  <div class="word-list" id="wordList"></div>
+  <div class="alpha-sidebar" id="alphaSidebar"></div>
+</div>
+
+<!-- Daily Page -->
+<div class="page" id="page-daily">
+  <div class="daily-content">
+    <div class="daily-section">
+      <div class="daily-label">Your Word of the Day</div>
+      <div class="daily-card" id="myWordCard">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+    <div class="daily-section">
+      <div class="daily-label">Discover a New Word</div>
+      <div class="daily-card" id="newWordCard">
+        <div class="loading">Fetching from dictionary...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Known Words Page -->
+<div class="page" id="page-known">
+  <div class="search-bar">
+    <input type="text" id="knownSearchInput" placeholder="Search known words..." autocomplete="off">
+  </div>
+  <div class="word-list" id="knownWordList"></div>
+</div>
+
+<!-- Add Page -->
+<div class="page" id="page-add">
+  <div class="add-content">
+    <div class="form-group">
+      <label>Word</label>
+      <input type="text" id="addWord" placeholder="Enter a word" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label>Definition</label>
+      <textarea id="addDef" placeholder="Enter definition (leave blank to auto-fetch)"></textarea>
+      <div class="form-hint">Leave blank to automatically look up the definition</div>
+    </div>
+    <button class="btn btn-accent" id="addBtn" style="width:100%;justify-content:center;">Add to Collection</button>
+    <div id="addMsg"></div>
+  </div>
+</div>
+
+<!-- Detail Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="handle"></div>
+    <div class="word-title" id="modalWord"></div>
+    <div class="word-def" id="modalDef"></div>
+    <div class="btn-row">
+      <button class="btn btn-danger" id="modalDelete">Delete</button>
+    </div>
+  </div>
+</div>
+
+<nav>
+  <button class="active" data-page="browse">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    Browse
+  </button>
+  <button data-page="daily">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41"/></svg>
+    Daily
+  </button>
+  <button data-page="known">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+    Known
+  </button>
+  <button data-page="add">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8m-4-4h8"/></svg>
+    Add
+  </button>
+</nav>
+
+<script>
+// ===== INITIAL WORD DATA =====
+const INITIAL_WORDS = [
+["Abattoir","a slaughterhouse"],
+["Abattu","(French) to look exhausted, dejected"],
+["Abeyance","state of temporary disuse or suspension"],
+["Abject","(of a situation or condition) extremely bad, unpleasant, and degrading; (of an unhappy state of mind) experienced to the maximum degree; (of a person or their behavior) completely without pride or dignity"],
+["Abstruse","hard to understand; recondite; esoteric; arcane"],
+["Acedia","medieval concept of depression. A flight from the divine that leads to not even caring that one does not care \u2014 a listlessness, a disengagement from the world, a total inability to act upon your life"],
+["Acrimonious","(typically of speech or a debate) angry or bitter"],
+["Acumen","the ability to make good judgments and quick decisions"],
+["Acushla","(n) Darling"],
+["Admonition","an act or action of admonishing; authoritative counsel or warning"],
+["Aeipathy","(n) a lost word; classified as an unyielding passion or love of something or someone \u2014 so strong that it could be considered pathological"],
+["Aestive","(adj) Relating to summer"],
+["Aestivate","to hibernate during dry or hot period"],
+["Affictitous","artificial, counterfeit, fake"],
+["Age-otori","(Japanese) the misery of a bad haircut"],
+["Akrasia","a lack of self control"],
+["Alacrity","brisk and cheerful readiness; eager willingness or promptness in response. From Latin alacer \u201Clively, cheerful.\u201D"],
+["Algonquin Round Table","a celebrated group of NYC writers"],
+["Alterity","(n) The state of being other or different"],
+["Amalgam","a mixture or blend"],
+["Ambeddo","(n.) a melancholic trance in which you become absorbed in sensory details \u2014 clouds of cream swirling in your coffee, drops of dew on the window \u2014 reawakening awareness of the haunting ephemeral beauty of life"],
+["Ampersand","the sign &"],
+["Amphigory","A nonsense verse. Specifically, a poem designed to look and sound good, but which has no meaning upon closer reading"],
+["Anachoresis","(n) ancient Greek for withdrawal to the desert, mostly for religious reasons"],
+["Anachronism","(n) an act of attributing a custom, event, or object to a period to which it does not belong"],
+["Anacoluthon","moving to a new topic of discussion before finishing the current one"],
+["Anhedonic","an inability to experience pleasure from activities usually found enjoyable"],
+["Anodyne","not likely to provoke dissent or offense; inoffensive, often deliberately so"],
+["Anthophilous","(adj) (of insects or other animals) frequenting flowers / feeding on flowers"],
+["Anthomania","(n) An extravagant passion for flowers"],
+["Antibasilican","(adj) opposed to the principle of monarchy"],
+["Aolist","(n) a person who claims to be inspired \u2014 to feel within that sudden wind of genius or artistic urgency; the wind is sometimes more like a draft"],
+["Apanthropy","(18th century) the desire to be away from other people"],
+["Aplomb","(n.) self-confidence or assurance, especially when in a demanding situation"],
+["Apocynthion","(n) point in an orbit of the moon which is farthest from the moon\u2019s centre"],
+["Apocryphal","(adj) (of a story or statement) of doubtful authenticity, although widely circulated as being true"],
+["Apodysophilia","(n) feverish desire to undress"],
+["Aporia","an untranslatable Greek word meaning \u201Cno way through\u201D \u2014 the feeling you get when you are at a loss, unable to work through a problem, cross a place, or reach a person"],
+["Apposite","apt in the circumstances or in relation to something"],
+["Approbation","(n) approval or praise"],
+["Apricate","turn your face to the sun and appreciate its warmth"],
+["Apricity","(n) the warmth of the sun in winter"],
+["Aprosexia","(n) inability to concentrate on anything"],
+["Araneous","(adj) like a spider\u2019s web; transparent; delicate"],
+["Asomatous","(adj) incorporeal; lacking body"],
+["Assumpsit","(n) a legal term with Latin roots for a type of implied promise or contract"],
+["Asteriated","(adj) having star-like rays"],
+["Astral","(adj) of, connected with, or resembling the stars; relating to a supposed nonphysical realm of existence"],
+["Atelophobia","the fear of imperfection; the fear of never being good enough"],
+["Astraphobia","(n) morbid fear of thunder and lightning"],
+["Astrolatry","(n) worship of stars"],
+["Astrophile","(n) person fond of learning about stars"],
+["Ataraxia","(n) imperturbability; utter calmness; emotional freedom and peace of mind"],
+["Atavistic","(adj) relating to or characterized by reversion to something ancient or ancestral"],
+["Atelophobe","(n) the driven perfectionist, one with a morbid fear of having things less than perfect"],
+["Athetise","(v) to spurn, reject"],
+["Athetosis","(n) nervous twitching of fingers and toes"],
+["Athymy","(n) melancholy"],
+["Atomy","(n) very small creature; skeleton"],
+["Atrabilious","(adj) very melancholic; hypochondriac"],
+["Attaint","(v) pass sentence of attainder on; sully; attach disgrace to; infect"],
+["Aureate","(adj) golden-colored; ornate"],
+["Auriphrygia","(n) gold embroidery"],
+["Auslaut","(n) final sound of syllable or word"],
+["Avunculize","(v.) to act as uncle"],
+["Azimuth","(n) the direction of a celestial object from the view of the observer"],
+["Babeldom","(n) a confused sound of voices"],
+["Badaud","(n) an idle, markedly stupid individual who believes just about anything and is a half-witted gossip"],
+["Balbriggan","(n) knitted cotton fabric used in underwear"],
+["Baldachin","(n) silk and gold fabric; fabric canopy over throne, altar, etc.; stone canopy over altar"],
+["Balletomane","(n) person fanatically devoted to ballet"],
+["B\u00E0of\u00F9x\u00ECng \u00E1oy\u00E8","Chinese for \u201Crevenge bedtime procrastination.\u201D Staying up late to try to make up for how little time you had to yourself all day"],
+["Baragnosis","(n) loss of ability to perceive weight"],
+["Baragouin","(n) gibberish"],
+["Basophobia","(n) a fear of falling which makes one afraid to stand up"],
+["Bedizen","(v) to dress gaudily"],
+["Beget","(v) give rise to; bring about"],
+["Beleaguered","besieged, under siege, surrounded; hard-pressed, under pressure, under stress"],
+["Belie","(1) fail to give a true notion or impression of something; disguise or contradict (2) fail to fulfill or justify a claim or expectation"],
+["Belliferous","(adj) bringing war"],
+["Belomancy","(n) divination using arrows"],
+["Bestiarian","(n) animal-lover"],
+["Bibble","(v) to drink often or much; or to drink or eat noisily"],
+["Bibliopegy","(n) art of book-binding"],
+["Biduous","(adj) lasting two days"],
+["Bj\u00F8rnetjeneste","(Norwegian) You try to help, but do too much so instead you do harm"],
+["Blateration","(n) blabber; chatter"],
+["Bleated","speak or complain in a weak, querulous, or foolish way"],
+["Blepharal","(adj) pertaining to eyelids"],
+["Blissom","(adj) with strong sexual desires"],
+["Bloviate","to talk at length, especially in an inflated or empty way"],
+["Boreism","(n) behavior of a boring person"],
+["Bouleversement","an overturning or inversion, especially a violent one; an upset or upheaval; turmoil"],
+["Breedbate","(n) someone looking for an argument"],
+["Bruxism","(n) grinding of teeth, especially in sleep"],
+["Bucolicry","of or relating to the pleasant aspects of the countryside and country life; rustic"],
+["Cabal","the contrived schemes of a group of persons secretly united in a plot; also: a group engaged in such schemes"],
+["Cacoethes","a strong urge to do something inadvisable. The modern version is \u2018pregret\u2019"],
+["Cad","a man who behaves dishonorably, especially towards women"],
+["Callow","(especially of a young person) inexperienced and immature"],
+["Cantic","slanted or tilted; having an oblique or uneven surface"],
+["Caprice","(n) a sudden and unaccountable change of mood or behavior"],
+["Capricious","(adj) given to sudden and unaccountable changes of mood or behavior"],
+["Carmine","cherry, crimson, scarlet color"],
+["Catatonia","(n) a type of depression where the person can remain speechless and motionless for an extended period of time"],
+["Cattywampus","diagonal, kitty-corner, askew"],
+["Caustic","capable of burning, corroding, or destroying living tissues"],
+["Cavalcade","a formal procession"],
+["Chawbacon","an unsophisticated person not interested in culture"],
+["Chicanery","dishonest talk or behavior used to deceive people"],
+["Chortle","chuckle, laugh in a gleeful way"],
+["Chthonic","of or relating to spirits, deities, and other beings dwelling under the earth (from classical mythology)"],
+["Circuitous","(adj) (of a route or journey) longer than the most direct way"],
+["Cloying","disgust or sicken (someone) with an excess of sweetness, richness, or sentiment"],
+["Concatenation","a series of interconnected things or events"],
+["Concomitant","(adj) naturally accompanying or associated; (n) a phenomenon that naturally accompanies or follows something"],
+["Confelicity","joy in the happiness of others"],
+["Conspiratorial","relating to or suggestive of a secret plan made by a group of people to do something unlawful or harmful"],
+["Contrition","state of feeling remorseful and penitent"],
+["Convalesce","recover one\u2019s health and strength over a period of time after an illness or operation"],
+["Conviviality","the quality of being friendly and lively; friendliness"],
+["Copacetic","in excellent order; perfectly satisfactory; fine"],
+["Crassulent","very fat, grossly obese"],
+["Culaccino","(Italian) the mark left on a table by a cold glass"],
+["Curmudgeon","a bad tempered or surly person"],
+["Dayligaun","twilight (Scot\u2019s \u2014 meaning \u2018Daylight-Going\u2019)"],
+["Decorum","propriety, etiquette"],
+["Defenestration","action of throwing someone out of a window (informal: dismissing someone from a position of power)"],
+["D\u00E9paysement","(French) the disorientation felt in a foreign country or culture, the sense of being a fish out of water"],
+["Despondent","disheartened, low spirits from loss of hope or courage"],
+["Desuetude","a state of disuse"],
+["Diatribe","(n) rant"],
+["Dichotomization","noun version of the verb dichotomize meaning to divide into two parts, classes, or groups"],
+["Diffident","modest or shy because of a lack of self-confidence"],
+["Dither","to be indecisive"],
+["Desiderium","an ardent desire or longing; especially a feeling of loss or grief for something lost"],
+["Dulcet","(especially of sound) sweet and soothing (often used ironically)"],
+["Ebullience","(n) bubbling enthusiasm"],
+["Ecclesiastical","relating to the church or clergy"],
+["Ecumenical","(adj) representing a number of different Christian churches"],
+["Elegiac","(especially of a work of art) having a mournful quality; wistfully mournful"],
+["Ennui","existential feeling of listlessness or dissatisfaction arising from a lack of occupation or excitement"],
+["Emphatically","in a forceful way"],
+["Epistemic","relating to knowledge or the degree of its validation"],
+["Ereyesterday","the day before yesterday"],
+["Erinaceous","something or someone that looks like or has the qualities of a hedgehog"],
+["Eschatological","concerning death, the end of the world, the destiny of humankind and the soul"],
+["Esoteric","understood by or meant for only the select few who have special knowledge or interest"],
+["Everywhen","all the time; always"],
+["Exoteric","suitable for or communicated to the general public (antonym to esoteric)"],
+["Facsimile","an exact copy, especially of written or printed material"],
+["Fastidious","very attentive to and concerned about accuracy and detail; excessively particular, critical, or demanding; hard to please"],
+["Fatuous","silly and pointless"],
+["Faute de Mieux","(French) lack of something better or more desirable"],
+["Fernweh","(German) a longing to travel, missing a place you\u2019ve never been"],
+["Fissiparous","inclined to cause or undergo division into separate parts"],
+["Flawsome","someone who accepts their flaws and is awesome regardless"],
+["Fledgling","(1) a young bird that has just acquired its flight feathers (2) a person or organization that is immature, inexperienced, or underdeveloped; a novice"],
+["Foible","a minor weakness or eccentricity in character"],
+["Forelsket","(Danish/Swedish) the euphoria you experience when you are first falling in love"],
+["Frenetic","(adj) fast and energetic in a rather wild and uncontrolled way"],
+["Frippet","frivolous or flamboyant young woman"],
+["Fusillade","a series of shots fired or missiles thrown all at the same time or in quick succession"],
+["Futtocks","each of the curved timber pieces forming the lower part of a ship\u2019s frame"],
+["Germane","relevant and appropriate to the subject being considered; pertinent. From Latin germanus \u201Chaving the same parents.\u201D"],
+["Gigil","(Filipino) the overwhelming urge to squeeze or pinch something very cute"],
+["Gleimous","slimy, full of phlegm"],
+["Grandiloquent","pompous or extravagant in language, style, or manner, especially in a way that is intended to impress"],
+["Graviloquence","(n) grave speech"],
+["Grinagog","one who is always grinning"],
+["Hagiography","the writing of the lives of saints; derogatory: adulatory writing about another person; biography that idealizes its subject"],
+["Hanyauku","(Rukwangali, Namibia) to walk on tiptoes on hot sand"],
+["Hermetic","(1) completely airtight; sealed (2) insulated or protected from outside influences (3) relating to an ancient occult tradition (4) difficult to understand; obscure and mysterious"],
+["Heterodox","not conforming to accepted or orthodox standards or beliefs"],
+["Hiraeth","(Welsh) a homesickness for a home you can\u2019t return to, or that never was"],
+["Homeric","(1) relating to or characteristic of the Greek poet Homer (2) of imposing stature or epic proportions; grand, heroic, or larger-than-life"],
+["Hurckle-durkling","find yourself still in bed long after it\u2019s time to get up"],
+["Iconoclastic","characterized by attack on cherished beliefs or institutions"],
+["Idolatrous","worshiping idols; treating someone or something as an idol"],
+["Igneous","(1) (of rock) formed through the cooling and solidification of magma or lava (2) relating to or involving fire. From Latin ignis \u201Cfire.\u201D"],
+["Ignoble","not honorable in character or purpose"],
+["Imponderable","difficult or impossible to estimate, assess, or answer"],
+["In omnia paratus","Latin phrase for \u201Cready for all things\u201D"],
+["Incantatory","having the quality of or relating to an incantation; resembling a magic spell or ritual chant in rhythm, tone, or repetitive quality"],
+["Incarnadine","a bright crimson or pinkish-red color"],
+["Incidental","incident to; accompanying but not a major part"],
+["Incipience","beginning stage"],
+["Incorporeal","not composed of matter; having no material existence"],
+["Indolence","avoidance of activity or exertion; laziness"],
+["Inferential","regarding a conclusion reached on the basis of evidence and reasoning"],
+["Insidious","proceeding in a gradual, subtle way, but with harmful effects"],
+["Insouciance","a casual lack of concern"],
+["Insularly","ignorant of or uninterested in cultures, ideas, or peoples outside one\u2019s own experience; relating to or from an island"],
+["Intemperate","having or showing a lack of self-control"],
+["Intransigence","refusal to change one\u2019s views or to agree about something; stubbornness or uncompromising attitude"],
+["Invidious","likely to cause unhappiness or resentment because it is unfair"],
+["Jayus","(Indonesian) a joke so poorly told and unfunny you can\u2019t help but laugh"],
+["Kalsarik\u00E4nni","(Finnish) drinking at home, alone, and in your underwear"],
+["Ken","one\u2019s range of knowledge or sight"],
+["Kintsugi","Japanese technique of repairing broken pottery with lacquer or resin mixed with powdered gold. The belief that when something has suffered damage and has a history it becomes more beautiful"],
+["Knave","an unprincipled, untrustworthy, or dishonest person"],
+["Komorebi","(Japanese) sunlight filtering through trees"],
+["Kuebiko","(n.) a state of exhaustion inspired by an act of senseless violence, which forces you to revise your image of what can happen in this world"],
+["Kummerspeck","(German) the weight you put on comfort eating after a break-up"],
+["Kuneshi","(Japanese) being told you can\u2019t do something and having a burning desire to prove them wrong"],
+["Labile","liable to change; easily altered"],
+["Laborious","(especially of a task, process, or journey) requiring considerable effort and time"],
+["Lagom","(Swedish) just the right amount"],
+["Laotong","(Mandarin) a friendship bonding two girls together for eternity as kindred sisters"],
+["Lardlet","(n.) a small piece of bacon that one puts in a recipe"],
+["Lascivious","(of a person, manner, or gesture) feeling or revealing an overt and often offensive sexual desire"],
+["Latibulate","to hide oneself in the corner"],
+["Laud","praise (a person or their achievements) highly, especially in a public context"],
+["Leviathan","a sea monster; a thing that is very large or powerful, especially a ship; an autocratic monarch or state"],
+["Lilt","(v) to move musically"],
+["Limerence","(n) the state of being infatuated with another person"],
+["Liminal","(1) relating to a transitional or initial stage of a process (2) occupying a position at, or on both sides of, a boundary or threshold"],
+["Locupletative","(adj) tending to enrich"],
+["Longueur","a tedious passage in a book or other work"],
+["Lucid","easily understood; completely intelligible or comprehensible; characterized by clear perception or understanding; shining or bright"],
+["Luftmensch","(Yiddish) someone who is a bit of a dreamer (literally \u2018air person\u2019)"],
+["Lugubrious","excessively mournful"],
+["Magistercide","the murder of one\u2019s teacher or master"],
+["Magniloquence","use of high-flown language"],
+["Malodorous","smelling very unpleasant"],
+["Mamihlapinatapai","(Yaghan) the special look shared between two people when both are wishing that the other would do something that they both want to do"],
+["M\u00E5ngata","(Swedish) the glimmering, roadlike reflection the moon creates on water"],
+["Masticate","chew (food)"],
+["Megalomania","obsession with the exercise of power, especially in the domination of others; delusion about one\u2019s own power or importance"],
+["Megalopolis","a very large, heavily populated city or urban complex"],
+["Mellifluous","(of a voice or words) sweet or musical; pleasant to hear"],
+["Mencolek","(Indonesian) the old trick where you tap someone lightly on the opposite shoulder from behind to fool them"],
+["Mendacity","(n) untruthfulness"],
+["Meraki","(Greek) to do something with soul, creativity, or love; when you leave a piece of yourself in your work"],
+["Meshuga","(of a person) crazy; idiotic. Origin: late 19th century, from Yiddish"],
+["Mesmeric","causing a person to become completely transfixed and unaware of anything else; hypnotic or spellbinding"],
+["Mewling","crying weakly; whimpering"],
+["Middling","moderate or average in size, amount, or rank"],
+["Mingent","(adj) discharging urine"],
+["Misanthrope","a person who dislikes humankind and avoids human society"],
+["Modicum","a small quantity of a particular thing"],
+["Molrowing","the practice of socializing with a disreputable woman"],
+["Mordant","(1) (especially of humor) sharply critical or sarcastic in a harsh or biting way (2) (of a substance) capable of burning or corroding organic tissue"],
+["Multicapitate","many-headed"],
+["Multivalent","having many different functions, forms, or facets; containing multitudes"],
+["Mumpsimuses","(16th century) those who insist they are right and apportion blame to others without looking at themselves"],
+["Munificence","the quality or action of being lavishly generous; great generosity"],
+["Mythologization","turned into myth"],
+["Myopia","nearsightedness"],
+["Naif","naive or ingenuous"],
+["Nascent","just coming into existence and beginning to display signs of future potential"],
+["Nod-crafty","(17th century) knowing the art of nodding your head with an air of great understanding, when you actually tuned out ages ago"],
+["Nugacity","a trivial or frivolous thing or idea"],
+["Nugatory","of no value or importance"],
+["Obarmate","(v.) to arm against"],
+["Obsequious","obedient or attentive to an excessive or servile degree; being too eager to praise or obey"],
+["Odoriferous","having or giving off a smell, especially an unpleasant or distinctive one"],
+["Ontological","relating to the branch of metaphysics dealing with the nature of being"],
+["Orphic","(adj.) categorized as something deeply mysterious; encompasses anything which is enchanting, subliminal and beyond human comprehension"],
+["Overmorrow","the day after tomorrow"],
+["Pallid","(of a person\u2019s face) pale, typically because of poor health; feeble or insipid"],
+["Parochial","relating to a church parish"],
+["Pathogenic","capable of causing disease; disease-producing"],
+["Pathos","a quality that evokes pity or sadness"],
+["Pedagogy","the method and practice of teaching, especially as an academic subject or theoretical concept"],
+["Pedantic","excessively concerned with minor details, rules, or displaying academic learning; overly scholarly in a way that is ostentatious or narrow-minded"],
+["Pelinti","(Ghanaian) to rapidly move unexpectedly hot food around your mouth"],
+["Pellucid","allowing the maximum passage of light, as glass; translucent"],
+["Penultimate","next to the last"],
+["Perfunctory","(of an action or gesture) carried out with a minimum of effort or reflection"],
+["Pertolerate","(17th century) to endure steadfastly to the end"],
+["Perturbative","relating to or involving the deviation of a system, moving object, or process from its regular or normal state or path"],
+["Perseverating","repeated same questions after head injury"],
+["Petrichor","(English) the smell after it rains"],
+["Phantasmagoric","sequence of real or imagined images like those seen in a dream"],
+["Philargyrist","someone who loves money"],
+["Philately","the collection of stamps and other postal matter as a hobby or investment"],
+["Phlegmatic","(of a person) having an unemotional and stolidly calm disposition"],
+["Pigritude","(n) laziness"],
+["Pigritudinous","beautiful"],
+["Pillory","attack or publicly ridicule"],
+["Pilloried","(v.) attack, criticize"],
+["Platitude","a remark or statement, especially one with a moral content, that has been used too often to be interesting or thoughtful"],
+["Pleonasm","the use of more words than are necessary to convey meaning (e.g., \u201Cblack darkness\u201D)"],
+["Polity","a form or process of civil government or constitution"],
+["Polyglot","knowing or using several languages"],
+["Polymorphic","occurring in several different forms, especially at different stages of development"],
+["Polyvalent","having many different functions, forms, or facets"],
+["Precocious","(of behavior or ability) indicative of early development"],
+["Precocity","(n) the act of developing abilities or proclivities earlier than usual"],
+["Pregnatress","(n.) female power that generates or gives birth to something, or someone who gives birth to new ideas, thoughts and projects"],
+["Preternatural","(adj) beyond what is natural or normal"],
+["Priggish","self-righteously moralistic and superior"],
+["Prolix","(adj) (of speech or writing) using or containing too many words; tediously lengthy"],
+["Prosaic","having the style or diction of prose; lacking poetic beauty; commonplace; unromantic"],
+["Proselytize","to convert or attempt to convert (someone) from one religion, belief, or opinion to another"],
+["Pudify","(v.) to cause to be ashamed"],
+["Pulchritudinous","beautiful"],
+["Purloin","(v) steal (something)"],
+["Putative","(adj) generally considered or reputed to be"],
+["Pyrrhic","describes a victory won at too great a cost"],
+["Quibbleism","(n) beating around the bush"],
+["Quiddling","spending time doing something random when you should be doing something else"],
+["Quiescent","in a state or period of inactivity or dormancy"],
+["Ramfeezled","(18th century) wrung out and exhausted"],
+["Rapscallion","a mischievous person; a rascal or ne\u2019er-do-well"],
+["Rapacious","aggressively greedy or grasping"],
+["Razzmatazz","another term for razzle-dazzle; language that appears to be earnest and meaningful but is a mixture of sense and nonsense"],
+["Rebarbative","unattractive and objectionable"],
+["Recondite","dealing with very profound, difficult, or abstruse subject matter"],
+["Refudiate","(v) refuse to accept or be associated with"],
+["Renaissance","(n) rebirth"],
+["Resplendent","shining brilliantly; gleaming; splendid"],
+["Revenant","one that returns after death or a long absence"],
+["Salival","(adj) of or relating to saliva"],
+["Sanguine","optimistic or positive, especially in an apparently bad or difficult situation; blood-red; bloody or bloodthirsty"],
+["Sartorially","of or relating to a tailor or tailored clothes; broadly: of or relating to clothes"],
+["Schlemiel","someone who accidentally knocks things over all the time"],
+["Schlimazel","someone who is unfortunate to have things fall on them all the time"],
+["Scintilla","(n) a tiny spark; a tiny trace or spark of a specified quality or feeling"],
+["Sclerotic","becoming rigid and unresponsive; losing the ability to adapt"],
+["Seigneur-terrasse","(French) a person who spends much time but little money in a caf\u00E9"],
+["Sennight","a week (seven nights, just as \u2018fortnight\u2019 is fourteen nights)"],
+["Shibboleth","a custom, principle, or belief distinguishing a particular class or group of people, especially a long-standing one regarded as outmoded or no longer important"],
+["Sibylline","relating to or characteristic of a sibyl; prophetic and mysterious"],
+["Simulacrum","(1) an image or representation of someone or something (2) an unsatisfactory imitation or substitute; something that merely appears to be real but lacks substance"],
+["Snerdle","to wrap up cozily beneath the covers and hold off the day for a little longer"],
+["Snollygoster","an unprincipled person"],
+["Sobremesa","(Spanish/Portuguese) the time after lunch or dinner spent talking to the people you shared the meal with"],
+["Solipsism","the view or theory that the self is all that can be known to exist"],
+["Soign\u00E9","(French) elegant, well-groomed, and sophisticated in appearance or style; showing meticulous care in dress and presentation"],
+["Sonorous","(1) capable of producing a deep, full, rich sound; resonant (2) (of speech or writing) impressive or imposing in style"],
+["Soubhiy\u00E9","(Arabic) that quiet time when you\u2019re the only one awake in the house and can enjoy a cup of coffee before the day starts"],
+["Splenic","relating to the spleen"],
+["Splenetic","bad-tempered; spiteful"],
+["Stiffrump","(18th century) one who sticks obstinately to the same path despite clear evidence it\u2019s the wrong one"],
+["Stochastic","randomly determined; having a random probability distribution or pattern that may be analyzed statistically but may not be predicted precisely"],
+["Sunder","to split apart; cleave"],
+["Superfluous","unnecessary, especially through being more than enough; excess, redundant"],
+["Supine","lying face upward; failing to act or protest as a result of moral weakness or indolence"],
+["Surreptitious","(adj) kept secret"],
+["Sybarite","a person who is self-indulgent in their fondness for sensuous luxury"],
+["Tarantism","(n.) overcoming melancholy by dancing; the uncontrollable urge to dance"],
+["Tartle","to hesitate in recognizing someone"],
+["Temerity","excessive confidence, audacity"],
+["Tempestuous","characterized by strong and turbulent or conflicting emotion; very stormy"],
+["Tidsoptimist","(Swedish) a person who is always late because they think they have more time than they do; a time optimist"],
+["Torpid","mentally or physically inactive; lethargic; dormant, especially during hibernation"],
+["Torschlusspanik","(German) anxiety or fear that one\u2019s life is passing by and future opportunities are diminishing (literally: door-close-panic)"],
+["Travail","(n.) painful or laborious effort"],
+["Tsundoku","(Japanese) the act of buying a book and leaving it unread, often piled together with other unread books"],
+["Tumescent","swollen or becoming swollen; (of language or literary style) pompous or pretentious"],
+["Tumid","(especially of a part of the body) swollen; (of language or literary style) pompous or bombastic"],
+["Turgid","swollen and distended or congested; (of language or style) tediously pompous or bombastic"],
+["Turgidity","(n) the state of being turgid"],
+["Uitwaaien","(Dutch) to head out into the wind as a way of clearing the mind and soul; literally an \u2018outblowing\u2019"],
+["Umbrage","offense or annoyance; resentment. Often used in the phrase \u201Ctake umbrage at\u201D"],
+["Unctuous","(of a person) excessively or ingratiatingly flattering; oily"],
+["Urbicide","destruction of a city"],
+["Utepils","(Norwegian) to sit outside enjoying a beer on a sunny day"],
+["Vacuity","lack of thought or intelligence; empty-headedness; empty space; emptiness"],
+["Vacuous","having or showing a lack of thought or intelligence; mindless"],
+["Verbose","characterized by the use of many or too many words; wordy"],
+["Verisimilitude","the appearance of being true or real"],
+["Vertiginous","causing vertigo, especially by being extremely high or steep"],
+["Vertumnal","(17th century) spring-like or giving a foretaste of spring. A nod to Vertumnus, god of the changing seasons"],
+["Vestigial","forming a very small remnant of something that was once much larger or more noticeable"],
+["Vitriolic","very caustic; scathing"],
+["Voorpret","(Dutch) pre-fun, the sense of enjoyment felt before a party or event takes place"],
+["Voracious","wanting or devouring great quantities of food; having a very eager approach to an activity"],
+["Voyeuristic","relating to a person who enjoys seeing the pain or distress of others"],
+["Wintriness","extreme lack of warmth; frostiness"],
+["Wistful","having or showing a feeling of vague or regretful longing"],
+["Wizened","shriveled or wrinkled with age; having a dried-up, shrunken appearance"],
+["Yestreen","yesterday evening"],
+["Yestermorn","yesterday morning"]
+];
+
+// ===== APP STATE =====
+const STORAGE_KEY = 'wordCollection';
+const DAILY_KEY = 'dailyWords';
+const KNOWN_KEY = 'knownWords';
+let words = [];
+let knownWords = [];
+let currentModalWord = null;
+let currentModalSource = null; // 'collection' or 'known'
+
+function loadWords() {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    words = JSON.parse(stored);
+  } else {
+    words = INITIAL_WORDS.map(([word, definition]) => ({
+      word, definition, added: Date.now()
+    }));
+    saveWords();
+  }
+}
+
+function saveWords() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(words));
+}
+
+function getWordsSorted() {
+  return [...words].sort((a, b) => a.word.localeCompare(b.word, undefined, { sensitivity: 'base' }));
+}
+
+function loadKnownWords() {
+  const stored = localStorage.getItem(KNOWN_KEY);
+  knownWords = stored ? JSON.parse(stored) : [];
+}
+
+function saveKnownWords() {
+  localStorage.setItem(KNOWN_KEY, JSON.stringify(knownWords));
+}
+
+function getKnownSorted() {
+  return [...knownWords].sort((a, b) => a.word.localeCompare(b.word, undefined, { sensitivity: 'base' }));
+}
+
+// ===== NAVIGATION =====
+document.querySelectorAll('nav button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const page = btn.dataset.page;
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.getElementById('alphaSidebar').style.display = (page === 'browse' || page === 'known') ? 'flex' : 'none';
+    if (page === 'daily') loadDailyPage();
+    if (page === 'known') renderKnownList(document.getElementById('knownSearchInput').value);
+  });
+});
+
+// ===== BROWSE PAGE =====
+function renderWordList(filter = '') {
+  const list = document.getElementById('wordList');
+  const sorted = getWordsSorted();
+  const filtered = filter
+    ? sorted.filter(w => w.word.toLowerCase().includes(filter.toLowerCase()) || w.definition.toLowerCase().includes(filter.toLowerCase()))
+    : sorted;
+
+  document.getElementById('wordCountHeader').textContent = `${words.length} words`;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="big">~</div>No words found</div>';
+    return;
+  }
+
+  let html = '';
+  let currentLetter = '';
+  filtered.forEach(w => {
+    const letter = w.word[0].toUpperCase();
+    if (letter !== currentLetter) {
+      currentLetter = letter;
+      html += `<div class="letter-header" id="letter-${letter}">${letter}</div>`;
+    }
+    html += `<div class="word-card" data-word="${encodeURIComponent(w.word)}">
+      <div class="word-title">${esc(w.word)}</div>
+      <div class="word-def">${esc(w.definition)}</div>
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.word-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const wordName = decodeURIComponent(card.dataset.word);
+      const w = words.find(x => x.word === wordName);
+      if (w) openModal(w);
+    });
+  });
+
+  renderAlphaSidebar(filtered);
+}
+
+function renderAlphaSidebar(filtered) {
+  const sidebar = document.getElementById('alphaSidebar');
+  const letters = [...new Set(filtered.map(w => w.word[0].toUpperCase()))].sort();
+  sidebar.innerHTML = letters.map(l => `<span data-letter="${l}">${l}</span>`).join('');
+  sidebar.querySelectorAll('span').forEach(s => {
+    s.addEventListener('click', () => {
+      const el = document.getElementById('letter-' + s.dataset.letter);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  renderWordList(e.target.value);
+});
+
+// ===== MODAL =====
+function openModal(w, source) {
+  currentModalWord = w;
+  currentModalSource = source || 'collection';
+  document.getElementById('modalWord').textContent = w.word;
+  document.getElementById('modalDef').textContent = w.definition;
+  const delBtn = document.getElementById('modalDelete');
+  delBtn.textContent = currentModalSource === 'known' ? 'Remove' : 'Delete';
+  document.getElementById('modal').classList.add('active');
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) {
+    document.getElementById('modal').classList.remove('active');
+  }
+});
+
+document.getElementById('modalDelete').addEventListener('click', () => {
+  if (!currentModalWord) return;
+  const label = currentModalSource === 'known' ? 'Remove' : 'Delete';
+  if (confirm(`${label} "${currentModalWord.word}"?`)) {
+    if (currentModalSource === 'known') {
+      knownWords = knownWords.filter(w => w.word !== currentModalWord.word);
+      saveKnownWords();
+      renderKnownList(document.getElementById('knownSearchInput').value);
+    } else {
+      words = words.filter(w => w.word !== currentModalWord.word);
+      saveWords();
+      renderWordList(document.getElementById('searchInput').value);
+    }
+    document.getElementById('modal').classList.remove('active');
+  }
+});
+
+// ===== DAILY PAGE =====
+const RANDOM_WORDS_FOR_DISCOVERY = [
+  // luminous & atmospheric
+  "ineffable","serendipity","ephemeral","sonorous","ethereal","diaphanous","gossamer",
+  "iridescent","evanescent","crepuscular","luminescent","incandescent","opalescent",
+  "effulgent","resplendent","tenebrous","scintillate","chiaroscuro","penumbra","silhouette",
+  // feeling & mood
+  "melancholy","wistful","languor","reverie","lassitude","insouciance","frisson","nostalgia",
+  // sound & language
+  "mellifluous","dulcet","sibilant","susurrus","tintinnabulation","cadence","soliloquy",
+  "rhapsody","elegy","aubade","requiem","nocturne","crescendo","murmuration","melisma",
+  // light & color
+  "cerulean","petrichor","verdant","halcyon","aurora","sfumato","patina",
+  // transformation & time
+  "chrysalis","palimpsest","chimera","lacuna","equinox","solstice","liminal",
+  "vespertine","inchoate","atavism","provenance","ephemera",
+  // wonder & mystery
+  "numinous","labyrinth","labyrinthine","quixotic","chimerical","mercurial",
+  "peripatetic","beguile","legerdemain","synesthesia","alchemy",
+  // architecture & scale
+  "archipelago","cathedral","zenith","nadir","apogee","cornucopia",
+  // texture & quality
+  "pellucid","redolent","evocative","resonant","languorous","somnolent","bucolic","idyllic",
+  // the useful-beautiful
+  "verisimilitude","quintessence","defenestration","surreptitious","clandestine","nebulous",
+  "vertiginous","eloquence","plethora","cipher","penultimate"
+];
+
+function getDailyData() {
+  const today = new Date().toISOString().slice(0, 10);
+  const stored = localStorage.getItem(DAILY_KEY);
+  if (stored) {
+    const data = JSON.parse(stored);
+    if (data.date === today) return data;
+  }
+  return null;
+}
+
+function saveDailyData(data) {
+  localStorage.setItem(DAILY_KEY, JSON.stringify(data));
+}
+
+function seededRandom(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = Math.imul(31, h) + seed.charCodeAt(i) | 0;
+  }
+  return Math.abs(h);
+}
+
+async function loadDailyPage() {
+  const today = new Date().toISOString().slice(0, 10);
+  let data = getDailyData();
+
+  // My word of the day
+  const myCard = document.getElementById('myWordCard');
+  if (words.length === 0) {
+    myCard.innerHTML = '<div class="word-def">Add some words to see your daily word!</div>';
+  } else {
+    const idx = seededRandom(today + 'my') % words.length;
+    const w = getWordsSorted()[idx % getWordsSorted().length];
+    myCard.innerHTML = `
+      <div class="word-title">${esc(w.word)}</div>
+      <div class="word-def">${esc(w.definition)}</div>
+    `;
+  }
+
+  // New word suggestion
+  const newCard = document.getElementById('newWordCard');
+
+  if (data && data.suggestion) {
+    renderSuggestion(newCard, data.suggestion);
+  } else {
+    await fetchNewSuggestion(newCard);
+  }
+}
+
+function renderSuggestion(card, suggestion) {
+  const alreadyHave = words.some(w => w.word.toLowerCase() === suggestion.word.toLowerCase());
+  const alreadyKnown = knownWords.some(w => w.word.toLowerCase() === suggestion.word.toLowerCase());
+  card.innerHTML = `
+    <div class="word-title">${esc(suggestion.word)}</div>
+    ${suggestion.phonetic ? `<div class="word-origin">${esc(suggestion.phonetic)}</div>` : ''}
+    <div class="word-def">${esc(suggestion.definition)}</div>
+    <div class="btn-row">
+      ${alreadyHave
+        ? '<div class="added-msg">Already in your collection</div>'
+        : '<button class="btn btn-accent" id="addSuggestionBtn">Add to Collection</button>'
+      }
+      ${alreadyKnown
+        ? ''
+        : '<button class="btn btn-outline" id="knowSuggestionBtn" style="border-color:var(--tan);color:var(--tan);">Already Know This</button>'
+      }
+      <button class="btn btn-outline" id="newSuggestionBtn">New Word</button>
+    </div>
+  `;
+  if (!alreadyHave) {
+    document.getElementById('addSuggestionBtn')?.addEventListener('click', () => {
+      words.push({ word: suggestion.word, definition: suggestion.definition, added: Date.now() });
+      saveWords();
+      renderWordList(document.getElementById('searchInput').value);
+      renderSuggestion(card, suggestion);
+    });
+  }
+  if (!alreadyKnown) {
+    document.getElementById('knowSuggestionBtn')?.addEventListener('click', () => {
+      knownWords.push({ word: suggestion.word, definition: suggestion.definition, added: Date.now() });
+      saveKnownWords();
+      fetchNewSuggestion(card);
+    });
+  }
+  document.getElementById('newSuggestionBtn')?.addEventListener('click', () => fetchNewSuggestion(card));
+}
+
+async function fetchNewSuggestion(card) {
+  card.innerHTML = '<div class="loading">Fetching a new word...</div>';
+  const skipSet = new Set([
+    ...words.map(w => w.word.toLowerCase()),
+    ...knownWords.map(w => w.word.toLowerCase())
+  ]);
+  const candidates = RANDOM_WORDS_FOR_DISCOVERY.filter(w => !skipSet.has(w.toLowerCase()));
+  const pool = candidates.length > 0 ? candidates : RANDOM_WORDS_FOR_DISCOVERY;
+  const tried = new Set();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    let idx;
+    do { idx = Math.floor(Math.random() * pool.length); } while (tried.has(idx) && tried.size < pool.length);
+    tried.add(idx);
+    const randomWord = pool[idx];
+    try {
+      const resp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${randomWord}`);
+      if (!resp.ok) continue;
+      const json = await resp.json();
+      const entry = json[0];
+      const meaning = entry.meanings[0];
+      const suggestion = {
+        word: entry.word.charAt(0).toUpperCase() + entry.word.slice(1),
+        definition: `(${meaning.partOfSpeech}) ${meaning.definitions[0].definition}`,
+        phonetic: entry.phonetic || ''
+      };
+      const today = new Date().toISOString().slice(0, 10);
+      saveDailyData({ date: today, suggestion });
+      renderSuggestion(card, suggestion);
+      return;
+    } catch {
+      continue;
+    }
+  }
+  card.innerHTML = `
+    <div class="word-def" style="color:var(--text2)">Could not fetch word. Check your connection.</div>
+    <div class="btn-row">
+      <button class="btn btn-outline" id="retrySuggestionBtn">Retry</button>
+    </div>
+  `;
+  document.getElementById('retrySuggestionBtn')?.addEventListener('click', () => fetchNewSuggestion(card));
+}
+
+// ===== KNOWN WORDS PAGE =====
+function renderKnownList(filter = '') {
+  const list = document.getElementById('knownWordList');
+  const sorted = getKnownSorted();
+  const filtered = filter
+    ? sorted.filter(w => w.word.toLowerCase().includes(filter.toLowerCase()) || w.definition.toLowerCase().includes(filter.toLowerCase()))
+    : sorted;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="big">~</div>' +
+      (knownWords.length === 0 ? 'Words you already know will appear here' : 'No words found') + '</div>';
+    renderAlphaSidebar([]);
+    return;
+  }
+
+  let html = `<div class="word-count">${knownWords.length} known words</div>`;
+  let currentLetter = '';
+  filtered.forEach(w => {
+    const letter = w.word[0].toUpperCase();
+    if (letter !== currentLetter) {
+      currentLetter = letter;
+      html += `<div class="letter-header" id="letter-${letter}">${letter}</div>`;
+    }
+    html += `<div class="word-card" data-word="${encodeURIComponent(w.word)}">
+      <div class="word-title">${esc(w.word)}</div>
+      <div class="word-def">${esc(w.definition)}</div>
+    </div>`;
+  });
+  list.innerHTML = html;
+
+  list.querySelectorAll('.word-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const wordName = decodeURIComponent(card.dataset.word);
+      const w = knownWords.find(x => x.word === wordName);
+      if (w) openModal(w, 'known');
+    });
+  });
+
+  renderAlphaSidebar(filtered);
+}
+
+document.getElementById('knownSearchInput').addEventListener('input', e => {
+  renderKnownList(e.target.value);
+});
+
+// ===== ADD PAGE =====
+document.getElementById('addBtn').addEventListener('click', async () => {
+  const wordInput = document.getElementById('addWord');
+  const defInput = document.getElementById('addDef');
+  const msgEl = document.getElementById('addMsg');
+  const word = wordInput.value.trim();
+  let definition = defInput.value.trim();
+
+  if (!word) {
+    msgEl.innerHTML = '<div class="form-msg error">Please enter a word</div>';
+    return;
+  }
+
+  if (words.some(w => w.word.toLowerCase() === word.toLowerCase())) {
+    msgEl.innerHTML = '<div class="form-msg error">This word is already in your collection</div>';
+    return;
+  }
+
+  if (!definition) {
+    msgEl.innerHTML = '<div class="form-msg" style="color:var(--text2)">Looking up definition...</div>';
+    try {
+      const resp = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+      if (!resp.ok) throw new Error('not found');
+      const json = await resp.json();
+      const meaning = json[0].meanings[0];
+      definition = `(${meaning.partOfSpeech}) ${meaning.definitions[0].definition}`;
+      defInput.value = definition;
+    } catch {
+      msgEl.innerHTML = '<div class="form-msg error">Could not find definition. Please enter one manually.</div>';
+      return;
+    }
+  }
+
+  words.push({ word, definition, added: Date.now() });
+  saveWords();
+  renderWordList(document.getElementById('searchInput').value);
+
+  wordInput.value = '';
+  defInput.value = '';
+  msgEl.innerHTML = `<div class="form-msg success">Added "${word}" to your collection!</div>`;
+  setTimeout(() => { msgEl.innerHTML = ''; }, 3000);
+});
+
+// ===== UTILS =====
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ===== INIT =====
+loadWords();
+loadKnownWords();
+renderWordList();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
