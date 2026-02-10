@@ -844,6 +844,10 @@ async function loadDailyPage() {
   } else {
     const idx = seededRandom(today + 'my') % words.length;
     const w = getWordsSorted()[idx % getWordsSorted().length];
+    // Save today's word to Firebase for Shortcut notifications
+    db.collection('lists').doc('daily').set({
+      date: today, word: w.word, definition: w.definition
+    }).catch(() => {});
     myCard.innerHTML = `
       <div class="word-title">${esc(w.word)}</div>
       <div class="word-def">${esc(w.definition)}</div>
@@ -1088,6 +1092,17 @@ loadWords();
 loadKnownWords();
 renderWordList();
 startFirebaseSync();
+
+// Write today's daily word to Firebase on every app open
+(function updateDailyWord() {
+  if (words.length === 0) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const idx = seededRandom(today + 'my') % words.length;
+  const w = getWordsSorted()[idx % getWordsSorted().length];
+  db.collection('lists').doc('daily').set({
+    date: today, word: w.word, definition: w.definition
+  }).catch(() => {});
+})();
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
